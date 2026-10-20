@@ -1,0 +1,58 @@
+<section class="held raster">
+<h1 class="hero">{{start.hero}}</h1>
+<p class="status"><span class="stip"></span>{{start.status}}</p>
+</section>
+
+<section id="werk" class="blok raster">
+<header class="sectiekop"><span class="nr">01</span><h2>{{nav.werk}}</h2><p>{{start.werk_intro}}</p><a class="pijl" href="{{werk_url}}">{{start.meer}} ↗</a></header>
+<div class="lijst">{{start_projecten}}</div>
+</section>
+
+<section id="fotografie" class="blok raster">
+<header class="sectiekop"><span class="nr">02</span><h2>{{nav.fotografie}}</h2><p>{{start.foto_tekst}}</p><a class="pijl" href="{{fotografie_url}}">{{start.meer}} ↗</a></header>
+<div class="strook">{{start_fotos}}</div>
+</section>
+
+<section id="film" class="blok raster">
+<header class="sectiekop"><span class="nr">03</span><h2>{{nav.film}}</h2><p>{{start.film_tekst}}</p><a class="pijl" href="{{film_url}}">{{start.meer}} ↗</a></header>
+<div class="strook films">{{start_films}}</div>
+</section>
+
+<section id="over" class="blok raster">
+<header class="sectiekop"><span class="nr">04</span><h2>{{over.kop}}</h2></header>
+<div class="foto">{{over_foto}}</div>
+<div class="tekst">
+<p class="groot">{{over.intro}}</p>
+<p>{{over.p1}}</p>
+<p>{{over.p2}}</p>
+<p>{{over.p3}}</p>
+<dl class="feiten">
+<div><dt>{{over.opleiding}}</dt><dd><ul>{{opleiding_lijst}}</ul><span class="klein">{{over.opleiding_school}}</span></dd></div>
+<div><dt>{{over.software}}</dt><dd>{{over.software_lijst}}</dd></div>
+<div><dt>{{over.talen}}</dt><dd>{{over.talen_lijst}}</dd></div>
+<div><dt>{{over.buiten}}</dt><dd>{{over.buiten_lijst}}</dd></div>
+<div><dt>{{over.beschikbaar}}</dt><dd>{{over.beschikbaar_tekst}}</dd></div>
+<div><dt>CV</dt><dd><a class="tekstlink" href="{{cv_url}}">{{over.cv}}</a></dd></div>
+</dl>
+</div>
+</section>
+
+<section id="contact" class="blok raster">
+<header class="sectiekop"><span class="nr">05</span><h2>{{contact.kop}}</h2></header>
+<p class="reuzen">{{contact.groot}}</p>
+<div class="contactlinks">
+<p class="klein">{{contact.intro}}</p>
+<a class="grootlink" href="mailto:{{email}}">{{email}}</a>
+<a class="tekstlink" href="{{instagram}}" target="_blank" rel="noopener">Instagram @afonso.mdc ↗</a>
+</div>
+<form action="{{formulier_adres}}" method="post" data-bezig="{{formulier.bezig}}" data-gelukt="{{formulier.gelukt}}" data-mislukt="{{formulier.mislukt}}">
+<label>{{formulier.naam}}<input name="name" autocomplete="name" required></label>
+<label>{{formulier.email}}<input name="email" type="email" autocomplete="email" required></label>
+<label class="breed">{{formulier.onderwerp}}<input name="_subject" required></label>
+<label class="breed">{{formulier.bericht}}<textarea name="message" required></textarea></label>
+<input class="val" name="_gotcha" tabindex="-1" autocomplete="off" aria-hidden="true">
+<button type="submit">{{formulier.verstuur}} →</button>
+<p class="status-formulier" role="status"></p>
+<p class="klein breed">{{formulier.privacy_voor}} <a class="tekstlink" href="{{privacy_url}}">{{formulier.privacy_link}}</a>.</p>
+</form>
+</section>

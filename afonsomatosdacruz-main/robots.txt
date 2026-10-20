@@ -1,0 +1,5 @@
+User-agent: *
+Allow: /
+Disallow: /bron/
+
+Sitemap: https://afonsomatosdacruz.be/sitemap.xml
