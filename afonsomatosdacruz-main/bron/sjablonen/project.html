@@ -1,11 +1,12 @@
-<section class="pagina-kop raster">
-<p class="klein">{{casenummer}}</p>
+<section class="case-kop raster case-{{project_id}}">
+<p class="meta">{{casenummer}}</p>
 <h1>{{projecttitel}}</h1>
 <p class="ondertitel">{{projectondertitel}}</p>
+<div class="opening">{{project_opening}}</div>
 <dl class="gegevens">{{project_gegevens}}</dl>
 <p class="intro">{{projectintro}}</p>
 </section>
 {{onderdelen}}
 <section class="volgend raster">
-<a href="{{volgend_url}}"><span class="klein">{{algemeen.volgend_project}}</span><span class="reuzen">{{volgend_titel}} →</span></a>
+<a href="{{volgend_url}}"><span class="meta">{{algemeen.volgend_project}}</span><span class="reuzen">{{volgend_titel}} →</span></a>
 </section>

@@ -29,10 +29,8 @@ def laad_teksten():
 
 
 def veilig(tekst):
-    """Maakt tekst veilig voor HTML, maar laat <br>, <em> en de decoratieve pil-beelden staan."""
-    veilig_tekst = html.escape(tekst, quote=False)
-    veilig_tekst = re.sub(r"&lt;(/?(?:br|em))&gt;", r"<\1>", veilig_tekst)
-    return re.sub(r'&lt;i class="(pil-\w+)"&gt;&lt;/i&gt;', r'<i class="\1"></i>', veilig_tekst)
+    """Maakt tekst veilig voor HTML, maar laat <br> en <em> staan."""
+    return re.sub(r"&lt;(/?(?:br|em))&gt;", r"<\1>", html.escape(tekst, quote=False))
 
 
 def vul(sjabloon_naam, waarden):
@@ -63,6 +61,14 @@ def maat(map, naam, formaat):
     return maten[sleutel]
 
 
+def bestandsmaat(pad):
+    """Breedte en hoogte van een los beeld, bijvoorbeeld 'omslag/smak.webp'."""
+    if pad not in maten:
+        with Image.open(WORTEL / f"afbeeldingen/{pad}") as bestand:
+            maten[pad] = bestand.size
+    return maten[pad]
+
+
 def beeld(tekst, map, naam, sizes, laden="lazy"):
     klein, groot = maat(map, naam, "klein"), maat(map, naam, "groot")
     bron = f"/afbeeldingen/{map}/{naam}"
@@ -81,19 +87,29 @@ def nummer(i):
 
 
 # ---------- Bouwstenen ----------
-def kader(tekst, lijst, titel="", uitleg="", start=0, sizes="50vw"):
+def kader(tekst, lijst, titel="", uitleg="", start=0, sizes="50vw", laden="lazy"):
     """Een kader met één beeld dat bij een klik alle beelden van de lijst groot toont."""
     map, naam = lijst[start]
     return (f'<a class="kader" href="/afbeeldingen/{map}/{naam}-groot.webp" data-start="{start}" '
             f'data-beelden="{vergroting_gegevens(tekst, lijst)}" data-titel="{html.escape(titel)}" '
-            f'data-tekst="{html.escape(uitleg)}">{beeld(tekst, map, naam, sizes)}</a>')
+            f'data-tekst="{html.escape(uitleg)}" aria-haspopup="dialog">{beeld(tekst, map, naam, sizes, laden)}</a>')
 
 
-def rij(nr, titel, soort, adres, voorbeeld, mini, extra=""):
-    """Een regel in een lijst: nummer, titel, soort en een klein beeld. Bij hover verschijnt een voorbeeld."""
-    return (f'<a class="rij" href="{adres}" data-voorbeeld="{voorbeeld}" {extra}><span class="nr">{nummer(nr)}</span>'
-            f'<span class="titel">{veilig(titel)}</span><span class="soort">{veilig(soort)}</span>'
-            f'<span class="mini"><img src="{mini}" width="120" height="120" alt="" loading="lazy" decoding="async"></span></a>')
+def los_beeld(pad, alt="", laden="lazy"):
+    """Een beeld zonder klein/groot-paar, zoals een omslag of filmstill. Breedte en hoogte komen uit het bestand."""
+    breedte, hoogte = bestandsmaat(pad)
+    return (f'<img src="/afbeeldingen/{pad}" width="{breedte}" height="{hoogte}" alt="{html.escape(alt)}" '
+            f'loading="{laden}" decoding="async">')
+
+
+def rij(nr, titel, soort, adres, mini, actie, extra=""):
+    """Een regel in een lijst: nummer, titel, soort, een klein beeld en wat er gebeurt bij een klik.
+    Bij hover verschijnt op een scherm met muis een groter voorbeeld (data-voorbeeld)."""
+    breedte, hoogte = bestandsmaat(mini)
+    return (f'<a class="rij" href="{adres}" data-voorbeeld="/afbeeldingen/{mini}" {extra}><span class="nr">{nummer(nr)}</span>'
+            f'<span class="rij-tekst"><span class="titel">{veilig(titel)}</span><span class="soort">{veilig(soort)}</span></span>'
+            f'<span class="rij-actie">{veilig(actie)}</span>'
+            f'<span class="mini"><img src="/afbeeldingen/{mini}" width="{breedte}" height="{hoogte}" alt="" loading="lazy" decoding="async"></span></a>')
 
 
 def rij_werk(tekst, nr, wid, lijst):
@@ -101,40 +117,57 @@ def rij_werk(tekst, nr, wid, lijst):
     titel, uitleg = tekst[f"werk.{wid}.titel"], tekst[f"werk.{wid}.tekst"]
     aantal = f" · {len(lijst)} {tekst['werk.rij_beelden']}" if len(lijst) > 1 else ""
     extra = (f'data-beelden="{vergroting_gegevens(tekst, lijst)}" data-titel="{html.escape(titel)}" '
-             f'data-tekst="{html.escape(uitleg)}"')
+             f'data-tekst="{html.escape(uitleg)}" aria-haspopup="dialog"')
     return rij(nr, titel, tekst[f"werk.{wid}.soort"] + aantal, f"/afbeeldingen/{map}/{naam}-groot.webp",
-               f"/afbeeldingen/{map}/{naam}-klein.webp", f"/afbeeldingen/{map}/{naam}-klein.webp", extra)
+               f"{map}/{naam}-klein.webp", f'{tekst["werk.bekijk"]} ↗', extra)
 
 
 def rij_project(taal, tekst, nr, pid):
-    omslag = f"/afbeeldingen/omslag/{pid}.webp"
     return rij(nr, tekst[f"project.{pid}.titel"], tekst[f"project.{pid}.ondertitel"],
-               url(taal, f"project/{pid}/"), omslag, omslag)
+               url(taal, f"project/{pid}/"), f"omslag/{pid}.webp", f'{tekst["werk.bekijk_project"]} →')
+
+
+def verhouding(lijst, film):
+    """Breedte gedeeld door hoogte van het eerste beeld of, zonder beeld, van de filmstill."""
+    breedte, hoogte = maat(*lijst[0], "klein") if lijst else bestandsmaat(f"film/{film}.webp")
+    return breedte / hoogte
 
 
 def video(tekst, naam, titel, onderschrift=""):
-    return (f'<figure class="film"><video controls preload="none" poster="/afbeeldingen/film/{naam}.webp" '
-            f'aria-label="{html.escape(titel)}"><source src="/video/{naam}.mp4" type="video/mp4">'
-            f'{veilig(tekst["film.geen_video"])}</video>{onderschrift}</figure>')
-
-
-def vierkant(tekst, map, naam, adres):
-    return f'<a class="vierkant" href="{adres}">{beeld(tekst, map, naam, "(min-width: 900px) 16vw, 33vw")}</a>'
+    """Een film met posterbeeld. Er wordt niets geladen voor iemand op afspelen klikt."""
+    breedte, hoogte = bestandsmaat(f"film/{naam}.webp")
+    soort = "staand" if breedte < hoogte else "breed"
+    return (f'<figure class="film film-{soort}"><video controls preload="none" playsinline poster="/afbeeldingen/film/{naam}.webp" '
+            f'width="{breedte}" height="{hoogte}" style="aspect-ratio: {breedte} / {hoogte}" aria-label="{html.escape(titel)}">'
+            f'<source src="/video/{naam}.mp4" type="video/mp4">{veilig(tekst["film.geen_video"])}</video>{onderschrift}</figure>')
 
 
 # ---------- Blokken per pagina ----------
+def kaart_project(taal, tekst, nr, pid):
+    """Een project op de startpagina: groot beeld, titel en een duidelijke link naar de hele case."""
+    aantal = len(dict(g.PROJECTEN)[pid])
+    meta = f'{tekst["project.soort_school"]} · {aantal} {tekst["project.label_onderdelen"].lower()}'
+    return (f'<a class="case case-{pid}" href="{url(taal, f"project/{pid}/")}">'
+            f'<div class="case-beeld">{los_beeld(f"omslag/{pid}.webp")}</div>'
+            f'<div class="case-tekst"><span class="nr">{nummer(nr)}</span><h3>{veilig(tekst[f"project.{pid}.titel"])}</h3>'
+            f'<p class="ondertitel">{veilig(tekst[f"project.{pid}.ondertitel"])}</p><p class="meta">{veilig(meta)}</p>'
+            f'<span class="pijl">{veilig(tekst["start.project_bekijken"])} →</span></div></a>')
+
+
 def blok_start(taal, tekst):
-    projecten = "".join(rij_project(taal, tekst, i, pid) for i, (pid, _) in enumerate(g.PROJECTEN, 1))
-    fotos = "".join(vierkant(tekst, "fotografie", f"straat-{i:02d}", url(taal, "fotografie/"))
-                    for i in (24, 10, 21, 12, 25, 7))
-    films = "".join(f'<a class="vierkant breed" href="{url(taal, "film/")}"><img src="/afbeeldingen/film/{fid}.webp" '
-                    f'alt="{html.escape(tekst[f"film.{fid}.titel"])}" loading="lazy"></a>'
-                    for fid, _ in g.FILMS)
+    projecten = "".join(kaart_project(taal, tekst, i, pid) for i, (pid, _) in enumerate(g.PROJECTEN, 1))
+    fotos = "".join(f'<a class="foto-link start-foto-{n}" href="{url(taal, "fotografie/")}">'
+                    f'{beeld(tekst, "fotografie", f"straat-{i:02d}", "(min-width: 900px) 45vw, 90vw")}</a>'
+                    for n, i in enumerate(g.FOTOS_START, 1))
+    films = "".join(f'<a class="film-link start-film-{n}" href="{url(taal, "film/")}">{los_beeld(f"film/{fid}.webp")}'
+                    f'<span class="bijschrift"><span class="nr">{nummer(n)}</span>{veilig(tekst[f"film.{fid}.titel"])}'
+                    f'<span class="klein">{tekst[f"film.{fid}.duur"]}</span></span></a>'
+                    for n, (fid, _) in enumerate(g.FILMS, 1))
     opleiding = "".join(f'<li><span>{veilig(tekst[f"over.opleiding_{i}_jaar"])}</span>{veilig(tekst[f"over.opleiding_{i}"])}</li>'
                         for i in (1, 2, 3))
     cv_taal = "nl" if taal == "nl" else "en"  # er is geen Franse cv: Frans verwijst naar de Engelse
     return {"start_projecten": projecten, "start_fotos": fotos, "start_films": films, "opleiding_lijst": opleiding,
-            "over_foto": beeld(tekst, "algemeen", "aan-het-werk", "(min-width: 900px) 33vw, 100vw"),
+            "over_foto": beeld(tekst, "algemeen", "aan-het-werk", "(min-width: 900px) 45vw, 100vw"),
             "cv_url": f"/cv/cv-afonso-matos-da-cruz-{cv_taal}.pdf"}
 
 
@@ -142,10 +175,13 @@ def blok_werk(taal, tekst):
     vakken = [("projecten", "".join(rij_project(taal, tekst, i, pid) for i, (pid, _) in enumerate(g.PROJECTEN, 1)))]
     for vak, werken in g.VAKKEN:
         vakken.append((vak, "".join(rij_werk(tekst, i, wid, lijst) for i, (wid, lijst) in enumerate(werken, 1))))
-    return "".join(
-        f'<section class="vak raster"><div class="vakkop"><span class="nr">{nummer(i)}</span><h2>{veilig(tekst[f"werk.vak_{vak}"])}</h2>'
+    sprong = "".join(f'<a href="#vak-{vak}"><span class="nr">{nummer(i)}</span> {veilig(tekst[f"werk.vak_{vak}"])}</a>'
+                     for i, (vak, _) in enumerate(vakken, 1))
+    secties = "".join(
+        f'<section id="vak-{vak}" class="vak raster"><div class="vakkop"><span class="nr">{nummer(i)}</span><h2>{veilig(tekst[f"werk.vak_{vak}"])}</h2>'
         f'<p>{veilig(tekst[f"werk.vak_{vak}_tekst"])}</p></div><div class="lijst">{rijen}</div></section>'
         for i, (vak, rijen) in enumerate(vakken, 1))
+    return {"vakken": secties, "werk_sprong": sprong}
 
 
 def blok_gegevens(tekst, pid, aantal):
@@ -157,16 +193,25 @@ def blok_gegevens(tekst, pid, aantal):
     return "".join(f'<div><dt>{veilig(tekst[k])}</dt><dd>{veilig(w)}</dd></div>' for k, w in rijen)
 
 
+def blok_opening(tekst, pid):
+    return los_beeld(f"omslag/{pid}.webp", tekst[f"alt.omslag/{pid}"], laden="eager")
+
+
 def blok_onderdelen(tekst, pid):
     resultaat = []
     for i, (oid, lijst, film) in enumerate(dict(g.PROJECTEN)[pid], 1):
         sleutel = f"project.{pid}.{oid}"
         titel, uitleg = tekst[f"{sleutel}.titel"], tekst[f"{sleutel}.tekst"]
-        media = "".join(kader(tekst, lijst, titel, uitleg, start=n) for n in range(len(lijst)))
+        if len(lijst) + bool(film) > 1:
+            soort, sizes = "twee", "(min-width: 900px) 45vw, 100vw"
+        elif verhouding(lijst, film) < 0.9:
+            soort, sizes = "staand", "(min-width: 900px) 50vw, 100vw"
+        else:
+            soort, sizes = "breed", "(min-width: 900px) 85vw, 100vw"
+        media = "".join(kader(tekst, lijst, titel, uitleg, start=n, sizes=sizes) for n in range(len(lijst)))
         if film:
             media += video(tekst, film, tekst[f"film.{film}.titel"])
-        soort = "twee" if len(lijst) + bool(film) == 2 else "een"
-        resultaat.append(f'<section class="onderdeel raster"><span class="nr">{nummer(i)}</span><h3>{veilig(titel)}</h3>'
+        resultaat.append(f'<section class="onderdeel raster {soort}"><span class="nr">{nummer(i)}</span><h3>{veilig(titel)}</h3>'
                          f'<p>{veilig(uitleg)}</p><div class="media {soort}">{media}</div></section>')
     return "".join(resultaat)
 
@@ -183,8 +228,12 @@ def blok_films(taal, tekst):
 
 
 def blok_fotos(tekst):
-    fotos = [("fotografie", f"straat-{i:02d}") for i in range(1, g.AANTAL_FOTOS + 1)]
-    return "".join(kader(tekst, fotos, start=i, sizes="(min-width: 900px) 25vw, 50vw") for i in range(len(fotos)))
+    fotos = [("fotografie", f"straat-{i:02d}") for i in g.FOTOS]
+    totaal = nummer(len(fotos))
+    return "".join(
+        f'<figure class="foto foto-{n}">{kader(tekst, fotos, start=n, sizes="(min-width: 900px) 50vw, 100vw", laden="eager" if n == 0 else "lazy")}'
+        f'<figcaption class="meta"><span class="nr">{nummer(n + 1)}</span> / {totaal}</figcaption></figure>'
+        for n in range(len(fotos)))
 
 
 # ---------- Pagina's ----------
@@ -195,7 +244,7 @@ def menu(taal, tekst, actief):
     for i, (pad, sleutel) in enumerate(items, 1):
         adres = url(taal) + pad if pad.startswith("#") else url(taal, pad)
         huidig = ' aria-current="page"' if pad == actief else ""
-        schakels.append(f'<a href="{adres}"{huidig}><span>{nummer(i)}</span> {veilig(tekst[sleutel])}</a>')
+        schakels.append(f'<a href="{adres}"{huidig}><span class="nr">{nummer(i)}</span> {veilig(tekst[sleutel])}</a>')
     return "".join(schakels)
 
 
@@ -221,11 +270,11 @@ def persoon(tekst):
 
 
 def schrijf_pagina(taal, tekst, pad, sjabloon, titel, beschrijving, blokken, actief=None, scripts=(), lichtbak=False,
-                   donker=False, gestructureerd=None):
+                   gestructureerd=None):
     waarden = {sleutel: veilig(waarde) for sleutel, waarde in tekst.items()}
     waarden.update(blokken)
     waarden.update({
-        "taal": taal, "landcode": LANDCODES[taal], "domein": g.DOMEIN, "thema": "donker" if donker else "licht",
+        "taal": taal, "landcode": LANDCODES[taal], "domein": g.DOMEIN,
         "paginatitel": html.escape(titel), "paginabeschrijving": html.escape(beschrijving),
         "canoniek": g.DOMEIN + url(taal, pad), "hreflang": hreflang(pad),
         "start_url": url(taal), "werk_url": url(taal, "werk/"), "fotografie_url": url(taal, "fotografie/"),
@@ -249,17 +298,18 @@ def bouw_taal(taal, tekst):
                    blok_start(taal, tekst), scripts=["voorbeeld", "formulier"],
                    gestructureerd={"@context": "https://schema.org", "@graph": [persoon(tekst)]})
     schrijf_pagina(taal, tekst, "werk/", "werk", tekst["werk.titel"], tekst["werk.beschrijving"],
-                   {"vakken": blok_werk(taal, tekst)}, actief="werk/", scripts=["voorbeeld", "vergroting"], lichtbak=True)
+                   blok_werk(taal, tekst), actief="werk/", scripts=["voorbeeld", "vergroting"], lichtbak=True)
     ids = [pid for pid, _ in g.PROJECTEN]
     for volgorde, pid in enumerate(ids, 1):
         volgend = ids[volgorde % len(ids)]
         aantal = len(dict(g.PROJECTEN)[pid])
         schrijf_pagina(taal, tekst, f"project/{pid}/", "project", f'{tekst[f"project.{pid}.titel"]} — {NAAM}',
                        tekst[f"project.{pid}.beschrijving"], {
+            "project_id": pid, "project_opening": blok_opening(tekst, pid),
             "projecttitel": veilig(tekst[f"project.{pid}.titel"]),
             "projectondertitel": veilig(tekst[f"project.{pid}.ondertitel"]),
             "projectintro": veilig(tekst[f"project.{pid}.intro"]),
-            "casenummer": f'{tekst["project.case"]} {nummer(volgorde)} / {nummer(len(ids))}',
+            "casenummer": f'{veilig(tekst["project.case"])} <span class="nr">{nummer(volgorde)}</span> / {nummer(len(ids))}',
             "project_gegevens": blok_gegevens(tekst, pid, aantal),
             "onderdelen": blok_onderdelen(tekst, pid),
             "volgend_url": url(taal, f"project/{volgend}/"), "volgend_titel": veilig(tekst[f"project.{volgend}.titel"]),
@@ -270,9 +320,9 @@ def bouw_taal(taal, tekst):
                             "image": f"{g.DOMEIN}/afbeeldingen/omslag/{pid}.webp",
                             "author": {"@id": f"{g.DOMEIN}/#afonso"}})
     schrijf_pagina(taal, tekst, "fotografie/", "fotografie", tekst["fotografie.titel"], tekst["fotografie.beschrijving"],
-                   {"foto_kaders": blok_fotos(tekst)}, actief="fotografie/", scripts=["vergroting"], lichtbak=True, donker=True)
+                   {"foto_kaders": blok_fotos(tekst)}, actief="fotografie/", scripts=["vergroting"], lichtbak=True)
     schrijf_pagina(taal, tekst, "film/", "film", tekst["film.titel"], tekst["film.beschrijving"],
-                   {"film_lijst": blok_films(taal, tekst)}, actief="film/", donker=True)
+                   {"film_lijst": blok_films(taal, tekst)}, actief="film/")
     schrijf_pagina(taal, tekst, "privacy/", "privacy", tekst["privacy.titel"], tekst["privacy.beschrijving"], {})
     schrijf_pagina(taal, tekst, "404.html", "fout", tekst["fout.titel"], tekst["fout.beschrijving"], {})
 

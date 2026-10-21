@@ -79,4 +79,8 @@ FILMS = [
     ("smak-posteranimatie", "smak"),
 ]
 
-AANTAL_FOTOS = 27
+# Gecureerde selectie: nummers van afbeeldingen/fotografie/straat-<nr>-klein.webp en -groot.webp.
+# FOTOS staan in de volgorde van de fotopagina, FOTOS_START zijn de vier foto's op de startpagina.
+# De andere foto's blijven als bestand staan, maar worden niet getoond.
+FOTOS = [24, 12, 21, 26, 10, 7]
+FOTOS_START = [24, 12, 10, 21]

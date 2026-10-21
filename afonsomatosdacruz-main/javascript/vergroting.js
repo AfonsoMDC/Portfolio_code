@@ -1,4 +1,5 @@
 // Vergroting van beelden in een venster. Wordt alleen geladen op pagina's met beeldtegels.
+// Escape sluit het venster (ingebouwd in <dialog>), pijltjes links en rechts bladeren, en de focus keert terug naar de tegel.
 const venster = document.querySelector("dialog");
 const grootBeeld = venster.querySelector("img");
 const titelVeld = venster.querySelector(".titel");
@@ -36,6 +37,7 @@ venster.querySelector(".sluiten").addEventListener("click", () => venster.close(
 venster.querySelector(".vorige").addEventListener("click", () => stap(-1));
 venster.querySelector(".volgende").addEventListener("click", () => stap(1));
 venster.addEventListener("keydown", (gebeurtenis) => {
+  if (beelden.length < 2) return;
   if (gebeurtenis.key === "ArrowLeft") stap(-1);
   if (gebeurtenis.key === "ArrowRight") stap(1);
 });
